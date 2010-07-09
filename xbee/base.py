@@ -11,8 +11,11 @@ This class defines data and methods common to both the Xbee Series 1 and
 Series 2 modules. This class should be subclassed in order to provide
 series-specific functionality.
 """
-import struct, threading
+import struct, threading, time
 from xbee.frame import APIFrame
+
+class ThreadQuitException(Exception):
+    pass
 
 class XBeeBase(threading.Thread):
     """
@@ -23,11 +26,35 @@ class XBeeBase(threading.Thread):
     def __init__(self, ser, shorthand=True, callback=None):
         self.serial = ser
         self.shorthand = shorthand
+        self._callback = None
+        self._thread_continue = False
         
         if callback:
             super(XBeeBase, self).__init__()
-            self.callback = callback
+            self._callback = callback
+            self._thread_continue = True
+            self._thread_quit = threading.Event()
             self.start()
+
+    def __del__(self):
+        """
+        In the event that this instance is garbage collected before
+        its associated serial port is closed, ensure safe thread
+        shutdown.
+        """
+        self.halt()
+
+    def halt(self):
+        """
+        halt: None -> None
+
+        If this instance has a separate thread running, it will be
+        halted. This method will wait until the thread has cleaned
+        up before returning.
+        """
+        if self._callback:
+            self._thread_continue = False
+            self._thread_quit.wait()
         
     def write(self, data):
         """
@@ -39,8 +66,18 @@ class XBeeBase(threading.Thread):
         self.serial.write(APIFrame(data).output())
         
     def run(self):
+        """
+        run: None -> None
+
+        This method overrides threading.Thread.run() and is automatically
+        called when an instance is created with threading enabled.
+        """
         while True:
-            self.callback(self.wait_read_frame())
+            try:
+                self._callback(self.wait_read_frame())
+            except ThreadQuitException:
+                break
+        self._thread_quit.set()
     
     def wait_for_frame(self):
         """
@@ -49,6 +86,10 @@ class XBeeBase(threading.Thread):
         wait_for_frame will read from the serial port until a valid
         API frame arrives. It will then return the binary data
         contained within the frame.
+
+        If this method is called as a separate thread
+        and self.thread_continue is set to False, the thread will
+        exit by raising a ThreadQuitException.
         """
         WAITING = 0
         PARSING = 1
@@ -58,6 +99,13 @@ class XBeeBase(threading.Thread):
         
         while True:
             if state == WAITING:
+                if self._callback and not self._thread_continue:
+                    raise ThreadQuitException
+
+                if self.serial.inWaiting() == 0:
+                    time.sleep(.01)
+                    continue
+                
                 byte = self.serial.read()
                 
                 # If a start byte is found, swich states

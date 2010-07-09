@@ -15,4 +15,13 @@ v1.7.1 7/7/2010 -- Bug fix: Now supports receiving I/O data with 64-bit addressi
                    * Previously, an exception was raised when a packet with ID 0x82
                    * arrived, which contains I/O samples with a 64-bit source address
                    * This has been fixed.
-
+v1.8.0  7/8/10  -- Implemented threading support
+                   * If a callback method is given to the XBeeBase constructor,
+                     a new thread will automatically be spawned. This thread
+                     will read from the serial port and call the given callback
+                     method whenever a valid data packet arrives.
+                   * XBeeBase.halt() was added. This method ensures the proper
+                     shutdown of a separate thread if one has been spawned.
+                     This method must be called before closing the serial
+                     port used by an XBee instance in order to prevent
+                     improper use of the serial port.
