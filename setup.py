@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='XBee',
-    version='1.7.0',
+    version='1.7.1',
     author='Paul Malmsten',
     author_email='pmalmsten@gmail.com',
     packages=['xbee', 'xbee.tests'],
