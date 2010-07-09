@@ -126,6 +126,10 @@ class TestAsyncCallback(unittest.TestCase):
         self.xbee = None
         self.serial = FakeReadDevice([], silent_on_empty=True)
         self.callback = lambda data: None
+
+    def tearDown(self):
+        # Ensure proper thread shutdown before continuing
+        self.xbee.halt()
     
     def test_provide_callback(self):
         """

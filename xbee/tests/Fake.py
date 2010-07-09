@@ -48,3 +48,9 @@ class FakeReadDevice:
         self.read_index += length
         
         return read_data
+
+    def inWaiting(self):
+        """
+        Returns the number of bytes available to be read
+        """
+        return len(self.data) - self.read_index
