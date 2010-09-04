@@ -1,15 +1,15 @@
 #! /usr/bin/python
 """
-test_xbee1.py
+test_ieee.py
 
 By Paul Malmsten, 2010
 pmalmsten@gmail.com
 
-Tests the XBee Series 1/2 implementation class for XBee API compliance
+Tests the XBee (IEEE 802.15.4) implementation class for XBee API compliance
 """
 import unittest
 from xbee.tests.Fake import FakeDevice, FakeReadDevice
-from xbee.impl import XBee
+from xbee.IEEE import XBee
 
 class InitXBee(unittest.TestCase):
     """

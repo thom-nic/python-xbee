@@ -5,4 +5,5 @@ By Paul Malmsten, 2010
 pmalmsten@gmail.com
 """
 
-from xbee.impl import XBee
+from xbee.IEEE import XBee
+from xbee.zigbee import ZigBee
