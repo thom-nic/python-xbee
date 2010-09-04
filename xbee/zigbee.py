@@ -1,24 +1,25 @@
 """
-impl.py
+zigbee.py
 
-By Paul Malmsten, 2010
+By Greg Rapp, 2010
+Inspired by code written by Paul Malmsten, 2010
 Inspired by code written by Amit Synderman and Marco Sangalli
-pmalmsten@gmail.com
+gdrapp@gmail.com
 
-This module implements an XBee Series 1/Series 2 driver.
+This module implements an XBee ZB (ZigBee) API library.
 """
 import struct
 from xbee.base import XBeeBase
 
-class XBee(XBeeBase):
+class ZigBee(XBeeBase):
     """
-    Provides an implementation of the XBee API for Series 1/2 modules
+    Provides an implementation of the XBee API for XBee ZB (ZigBee) modules
     with recent firmware.
     
-    Commands may be sent to a device by instansiating this class with
+    Commands may be sent to a device by instantiating this class with
     a serial port object (see PySerial) and then calling the send
     method with the proper information specified by the API. Data may
-    be read from a device (syncronously only, at the moment) by calling 
+    be read from a device (synchronously only, at the moment) by calling 
     wait_read_frame.
     """
     # Packets which can be sent to an XBee
@@ -32,12 +33,12 @@ class XBee(XBeeBase):
     #         }
     api_commands = {"at":
                         [{'name':'id',        'len':1,      'default':'\x08'},
-                         {'name':'frame_id',  'len':1,      'default':'\x00'},
+                         {'name':'frame_id',  'len':1,      'default':'\x01'},
                          {'name':'command',   'len':2,      'default':None},
                          {'name':'parameter', 'len':None,   'default':None}],
                     "queued_at":
                         [{'name':'id',        'len':1,      'default':'\x09'},
-                         {'name':'frame_id',  'len':1,      'default':'\x00'},
+                         {'name':'frame_id',  'len':1,      'default':'\x01'},
                          {'name':'command',   'len':2,      'default':None},
                          {'name':'parameter', 'len':None,   'default':None}],
                     "remote_at":
@@ -49,16 +50,24 @@ class XBee(XBeeBase):
                          {'name':'options',         'len':1,        'default':'\x02'},
                          {'name':'command',         'len':2,        'default':None},
                          {'name':'parameter',       'len':None,     'default':None}],
-                    "tx_long_addr":
-                        [{'name':'id',              'len':1,        'default':'\x00'},
-                         {'name':'frame_id',        'len':1,        'default':'\x00'},
-                         {'name':'dest_addr',       'len':8,        'default':None},
+                    "tx":
+                        [{'name':'id',              'len':1,        'default':'\x10'},
+                         {'name':'frame_id',        'len':1,        'default':'\x01'},
+                         {'name':'dest_addr_long',  'len':8,        'default':None},
+                         {'name':'dest_addr',       'len':2,        'default':None},
+                         {'name':'broadcast_radius','len':1,        'default':'\x00'},
                          {'name':'options',         'len':1,        'default':'\x00'},
                          {'name':'data',            'len':None,     'default':None}],
-                    "tx":
-                        [{'name':'id',              'len':1,        'default':'\x01'},
+                    "tx_explicit":
+                        [{'name':'id',              'len':1,        'default':'\x11'},
                          {'name':'frame_id',        'len':1,        'default':'\x00'},
+                         {'name':'dest_addr_long',  'len':8,        'default':None},
                          {'name':'dest_addr',       'len':2,        'default':None},
+                         {'name':'src_endpoint',    'len':1,        'default':None},
+                         {'name':'dest_endpoint',   'len':1,        'default':None},
+                         {'name':'cluster',         'len':1,        'default':None},
+                         {'name':'profile',         'len':1,        'default':None},
+                         {'name':'broadcast_radius','len':1,        'default':'\x00'},
                          {'name':'options',         'len':1,        'default':'\x00'},
                          {'name':'data',            'len':None,     'default':None}]
                     }
@@ -77,41 +86,40 @@ class XBee(XBeeBase):
     #           ...
     #        }
     #
-    api_responses = {"\x80":
-                        {'name':'rx_long_addr',
-                         'structure':
-                            [{'name':'source_addr', 'len':8},
-                             {'name':'rssi',        'len':1},
-                             {'name':'options',     'len':1},
-                             {'name':'rf_data',     'len':None}]},
-                     "\x81":
+    api_responses = {"\x90":
                         {'name':'rx',
                          'structure':
-                            [{'name':'source_addr', 'len':2},
-                             {'name':'rssi',        'len':1},
-                             {'name':'options',     'len':1},
-                             {'name':'rf_data',     'len':None}]},
-                     "\x82":
+                            [{'name':'source_addr_long','len':8},
+                             {'name':'source_addr',     'len':2},
+                             {'name':'options',         'len':1},
+                             {'name':'rf_data',         'len':None}]},
+                     "\x91":
+                        {'name':'rx_explicit',
+                         'structure':
+                            [{'name':'source_addr_long','len':8},
+                             {'name':'source_addr',     'len':2},
+                             {'name':'source_endpoint', 'len':1},
+                             {'name':'dest_endpoint',   'len':1},
+                             {'name':'cluster',         'len':2},
+                             {'name':'profile',         'len':2},
+                             {'name':'options',         'len':1},
+                             {'name':'rf_data',         'len':None}]},
+                     "\x92": # Checked by GDR-parse_samples_header function appears to need update to support
                         {'name':'rx_io_data_long_addr',
                          'structure':
                             [{'name':'source_addr_long','len':8},
-                             {'name':'rssi',            'len':1},
+                             {'name':'source_addr',     'len':2},
                              {'name':'options',         'len':1},
                              {'name':'samples',         'len':None}],
                          'parse_as_io_samples':'samples'},
-                     "\x83":
-                        {'name':'rx_io_data',
-                         'structure':
-                            [{'name':'source_addr', 'len':2},
-                             {'name':'rssi',        'len':1},
-                             {'name':'options',     'len':1},
-                             {'name':'samples',     'len':None}],
-                         'parse_as_io_samples':'samples'},
-                     "\x89":
+                     "\x8b":
                         {'name':'tx_status',
                          'structure':
-                            [{'name':'frame_id',    'len':1},
-                             {'name':'status',      'len':1}]},
+                            [{'name':'frame_id',        'len':1},
+                             {'name':'dest_addr',       'len':2},
+                             {'name':'retries',         'len':1},
+                             {'name':'deliver_status',  'len':1},
+                             {'name':'discover_status', 'len':1}]},
                      "\x8a":
                         {'name':'status',
                          'structure':
@@ -123,7 +131,7 @@ class XBee(XBeeBase):
                              {'name':'command',     'len':2},
                              {'name':'status',      'len':1},
                              {'name':'parameter',   'len':None}]},
-                     "\x97":
+                     "\x97": #Checked GDR (not sure about parameter, could be 4 bytes)
                         {'name':'remote_at_response',
                          'structure':
                             [{'name':'frame_id',        'len':1},
@@ -132,12 +140,26 @@ class XBee(XBeeBase):
                              {'name':'command',         'len':2},
                              {'name':'status',          'len':1},
                              {'name':'parameter',       'len':None}]},
+                     "\x95":
+                        {'name':'node_id_indicator',
+                         'structure':
+                            [{'name':'sender_addr_long','len':8},
+                             {'name':'sender_addr',     'len':2},
+                             {'name':'options',         'len':1},
+                             {'name':'source_addr',     'len':2},
+                             {'name':'source_addr_long','len':8},
+                             {'name':'node_id',         'len':0},
+                             {'name':'parent_source_addr','len':2},
+                             {'name':'device_type',     'len':1},
+                             {'name':'source_event',    'len':1},
+                             {'name':'digi_profile_id', 'len':2},
+                             {'name':'manufacturer_id', 'len':2}]}
                      }
     
     def __init__(self, *args, **kwargs):
         # Call the super class constructor to save the serial port
-        super(XBee, self).__init__(*args, **kwargs)
+        super(ZigBee, self).__init__(*args, **kwargs)
 
     def __del__(self):
         # Call the super class destructor to safely shutdown
-        super(XBee, self).__del__()
+        super(ZigBee, self).__del__()

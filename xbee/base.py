@@ -7,8 +7,8 @@ pmalmsten@gmail.com
 
 XBee superclass module
 
-This class defines data and methods common to both the Xbee Series 1 and
-Series 2 modules. This class should be subclassed in order to provide
+This class defines data and methods common to all XBee modules. 
+This class should be subclassed in order to provide
 series-specific functionality.
 """
 import struct, threading, time
@@ -220,16 +220,33 @@ class XBeeBase(threading.Thread):
         
         # Parse the packet in the order specified
         for field in packet_spec:
+    
+            # Skip zero bytes by default
+            bytes_to_skip = 0
+            
+            # Take field length and store in a variable in case we have to temporarily modify it
+            # during null terminated string length discovery below
+            field_len = field['len']
+            
+            # If len is 0, look for a null terminated string and set len to length of string
+            if field_len == 0:
+                # Set bytes_to_skip to 1 so we drop the null termination byte
+                bytes_to_skip = 1
+                i = index
+                while data[i] != '\x00':
+                    field_len += 1
+                    i += 1
+            
             # Store the number of bytes specified
             # If the data field has no length specified, store any
             #  leftover bytes and quit
-            if field['len'] is not None:
+            if field_len is not None:
                 # Are we trying to read beyond the last data element?
-                if index + field['len'] > len(data):
+                if index + field_len > len(data):
                     raise ValueError(
                         "Response packet was shorter than expected")
                 
-                field_data = data[index:index + field['len']]
+                field_data = data[index:index + field_len]
                 info[field['name']] = field_data
             else:
                 field_data = data[index:]
@@ -242,12 +259,13 @@ class XBeeBase(threading.Thread):
                 break
             
             # Move the index
-            index += field['len']
+            index += (field_len + bytes_to_skip)
             
         # If there are more bytes than expected, raise an exception
         if index < len(data):
             raise ValueError(
-                "Response packet was longer than expected")
+                "Response packet was longer than expected; expected: %d, got: %d bytes" % (index, 
+                                                                                           len(data)))
                 
         # Check if this packet was an IO sample
         # If so, process the sample data

@@ -83,6 +83,7 @@ Contributors
 ==================
 
 Paul Malmsten <pmalmsten@gmail.com>
+Greg Rapp <gdrapp@gmail.com>
 
 Special Thanks
 ==================
