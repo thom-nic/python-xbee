@@ -18,8 +18,8 @@ class XBee(XBeeBase):
     Commands may be sent to a device by instansiating this class with
     a serial port object (see PySerial) and then calling the send
     method with the proper information specified by the API. Data may
-    be read from a device (syncronously only, at the moment) by calling 
-    wait_read_frame.
+    be read from a device syncronously by calling wait_read_frame. For
+    asynchronous reads, see the definition of XBeeBase.
     """
     # Packets which can be sent to an XBee
     

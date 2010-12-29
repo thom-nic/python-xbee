@@ -19,6 +19,19 @@ and allows a developer to send and receive the
 information they desire without dealing with the
 raw communication details.
 
+.. note::
+
+    This library is compatible with both XBee 802.15.4 (Series 1)
+    and XBee ZigBee (Series 2) modules, normal and PRO. The following
+    examples are applicable to XBee 802.15.4 modules; to follow
+    these examples with a XBee ZigBee device, change the line::
+        
+        xbee = XBee(serial_port)
+
+    to::
+        
+        xbee = ZigBee(serial_port)
+
 Usage
 -----
 
@@ -106,6 +119,44 @@ within the xbee package source code archive or source control.
 API
 ----
 
+Frame Data Format
+~~~~~~~~~~~~~~~~~~~~
+
+Information returned from this library is a dictionary in the following
+format::
+
+    {'id':str,
+     'param':binary data,
+     ...}
+
+The id field is always a human-readable name of the packet type received.
+All following fields, shown above with the key 'param', map binary data to
+each of the possible fields contained within the received data frame. 
+
+.. note::
+    A listing of all supported data frames and their respective fields may be 
+    found in xbee.ieee.XBee (or xbee.zigbee.ZigBee for XBee ZB devices) 
+    defined as api_responses.
+
+Sample Data Format
+~~~~~~~~~~~~~~~~~~
+
+Sample data is returned in the following format::
+    
+    [ {"dio-0":True,
+       "dio-1":False,
+       "adc-0":100"}, ...]
+
+This format is a list of dictionaries. Each dictionary represents one
+sample, listed in chronological order. Each sample dictionary can contain
+any number of digital (dio) and analog (adc) pin samples. The keys of a 
+sample dictionary will always follow this pattern::
+
+    (dio|adc)-[0-9]+
+
+The number of dio and adc values returned depends upon the type and
+configuration of the XBee device used with this library.
+
 Sending Data to an XBee Device
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -133,10 +184,10 @@ may be reduced to::
 
     xbee.at(command='MY')
 
-For a listing of all supported API frames which may be sent,
-see the documentation for your XBee device. Additionally,
-xbee.impl.XBee contains a listing of all supported commands
-and their associated data fields.
+.. note::
+    A listing of all supported commands and their associated data fields 
+    may be found in xbee.ieee.XBee (xbee.zigbee.ZigBee for XBee ZB devices) 
+    defined as api_commands. 
 
 API Reference
 ~~~~~~~~~~~~~
@@ -145,6 +196,9 @@ API Reference
    :members:
 
 .. autoclass:: xbee.XBee
+   :members:
+
+.. autoclass:: xbee.zigbee.ZigBee
    :members:
 
 .. toctree::

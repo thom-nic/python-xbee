@@ -19,8 +19,29 @@ class ThreadQuitException(Exception):
 
 class XBeeBase(threading.Thread):
     """
-    Abstract base class providing basic API frame generation, validation,
-    and data extraction methods for XBee modules
+    Abstract base class providing command generation and response
+    parsing methods for XBee modules.
+    
+    Constructor arguments:
+        ser:    The file-like serial port to use.
+
+
+        shorthand: boolean flag which determines whether shorthand command 
+                   calls (i.e. xbee.at(...) instead of xbee.send("at",...) 
+                   are allowed.
+
+        callback: function which should be called with frame data
+                  whenever a frame arrives from the serial port.
+                  When this is not None, a background thread to monitor
+                  the port and call the given function is automatically
+                  started.
+
+        escaped: boolean flag which determines whether the library should
+                 operate in escaped mode. In this mode, certain data bytes
+                 in the output and input streams will be escaped and unescaped
+                 in accordance with the XBee API. This setting must match
+                 the appropriate api_mode setting of an XBee device; see your
+                 XBee device's documentation for more information.
     """
                        
     def __init__(self, ser, shorthand=True, callback=None, escaped=False):
@@ -171,8 +192,8 @@ class XBeeBase(threading.Thread):
     def _split_response(self, data):
         """
         _split_response: binary data -> {'id':str,
-                                        'param':binary data,
-                                        ...}
+                                         'param':binary data,
+                                         ...}
                                         
         _split_response takes a data packet received from an XBee device
         and converts it into a dictionary. This dictionary provides

@@ -19,8 +19,8 @@ class ZigBee(XBeeBase):
     Commands may be sent to a device by instantiating this class with
     a serial port object (see PySerial) and then calling the send
     method with the proper information specified by the API. Data may
-    be read from a device (synchronously only, at the moment) by calling 
-    wait_read_frame.
+    be read from a device synchronously by calling wait_read_frame.
+    For asynchronous reads, see the defintion of XBeeBase.
     """
     # Packets which can be sent to an XBee
     
