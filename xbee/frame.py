@@ -38,7 +38,12 @@ class APIFrame:
         
         # Add together all bytes
         for byte in self.data:
-            total += ord(byte)
+            if hasattr(byte, 'encode'):
+                # Python 2.X
+                total += ord(byte)
+            else:
+                # Python 3.X
+                total += byte
             
         # Only keep the last byte
         total = total & 0xFF
