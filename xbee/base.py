@@ -111,35 +111,35 @@ class XBeeBase(threading.Thread):
         frame = APIFrame(escaped=self._escaped)
         
         while True:
-                if self._callback and not self._thread_continue:
-                    raise ThreadQuitException
+            if self._callback and not self._thread_continue:
+                raise ThreadQuitException
 
-                if self.serial.inWaiting() == 0:
-                    time.sleep(.01)
-                    continue
+            if self.serial.inWaiting() == 0:
+                time.sleep(.01)
+                continue
+            
+            byte = self.serial.read()
+
+            if byte != APIFrame.START_BYTE:
+                continue
+
+            # Save all following bytes, if they are not empty
+            if len(byte) == 1:
+                frame.fill(byte)
                 
+            while(frame.remaining_bytes() > 0):
                 byte = self.serial.read()
-
-                if byte != APIFrame.START_BYTE:
-                    continue
-
-                # Save all following bytes, if they are not empty
+                
                 if len(byte) == 1:
                     frame.fill(byte)
-                    
-                while(frame.remaining_bytes() > 0):
-                    byte = self.serial.read()
-                    
-                    if len(byte) == 1:
-                        frame.fill(byte)
 
-                try:
-                    # Try to parse and return result
-                    frame.parse()
-                    return frame
-                except ValueError:
-                    # Bad frame, so restart
-                    frame = APIFrame(escaped=self._escaped)
+            try:
+                # Try to parse and return result
+                frame.parse()
+                return frame
+            except ValueError:
+                # Bad frame, so restart
+                frame = APIFrame(escaped=self._escaped)
                         
     def _build_command(self, cmd, **kwargs):
         """
