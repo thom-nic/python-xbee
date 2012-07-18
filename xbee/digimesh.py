@@ -74,22 +74,14 @@ class DigiMesh(XBeeBase):
     #           ...
     #        }
     #
-    api_responses = {"\x90":
-                        {'name':'rx_long_addr',
+    api_responses = {b"\x88":
+                        {'name':'at_response',
                          'structure':
-                            [{'name':'frame_id', 'len':1},
-                             {'name':'source_addr', 'len':8},
-                             {'name':'reserved', 'len':2},
-                             {'name':'options',     'len':1},
-                             {'name':'data',     'len':None}]},
-                    # "\x91": to do!
-                    #    {'name':'explicit_rx_indicator',
-                    #     'structure':
-                    #        [{'name':'source_addr', 'len':2},
-                    #         {'name':'rssi',        'len':1},
-                    #         {'name':'options',     'len':1},
-                    #         {'name':'rf_data',     'len':None}]},
-                     "\x8a":
+                            [{'name':'frame_id',    'len':1},
+                             {'name':'command',     'len':2},
+                             {'name':'status',      'len':1},
+                             {'name':'parameter',   'len':None}]},
+                     b"\x8a":
                         {'name':'status',
                          'structure':
                             [{'name':'status',      'len':1}]},
@@ -97,18 +89,27 @@ class DigiMesh(XBeeBase):
                         {'name':'tx_status',
                          'structure':
                             [{'name':'frame_id',        'len':1},
-                             {'name':'dest_addr',       'len':2},
+                             {'name':'reserved',        'len':2, 'default':'\xFF\xFE'},
                              {'name':'retries',         'len':1},
                              {'name':'deliver_status',  'len':1},
                              {'name':'discover_status', 'len':1}]},
-                     "\x88":
-                        {'name':'at_response',
+                     b"\x90":
+                        {'name':'rx',
                          'structure':
-                            [{'name':'frame_id',    'len':1},
-                             {'name':'command',     'len':2},
-                             {'name':'status',      'len':1},
-                             {'name':'parameter',   'len':None}]},
-                     "\x95":
+                            [{'name':'frame_id', 'len':1},
+                             {'name':'source_addr', 'len':8},
+                             {'name':'reserved', 'len':2},
+                             {'name':'options',     'len':1},
+                             {'name':'data',     'len':None}]},
+                    # b"\x91": to do!
+                    #    {'name':'explicit_rx_indicator',
+                    #     'structure':
+                    #        [{'name':'source_addr', 'len':2},
+                    #         {'name':'rssi',        'len':1},
+                    #         {'name':'options',     'len':1},
+                    #         {'name':'rf_data',     'len':None}]},
+                    # b"\x92": data sample rx indicator {}
+                     b"\x95":
                         {'name':'node_id',
                          'structure':
                             [{'name':'frame_id',          'len':1},
@@ -120,7 +121,7 @@ class DigiMesh(XBeeBase):
                              {'name':'NI',                'len':2},
                              {'name':'parent',            'len':1}]},
 
-                     "\x97":
+                     b"\x97":
                         {'name':'remote_at_response',
                          'structure':
                             [{'name':'frame_id',        'len':1},
@@ -128,16 +129,7 @@ class DigiMesh(XBeeBase):
                              {'name':'reserved',        'len':2},
                              {'name':'command',         'len':2},
                              {'name':'status',          'len':1},
-                             {'name':'parameter',       'len':None}]},
-
-                     "\x8b":
-                        {'name':'transmit_status',
-                         'structure':
-                            [{'name':'frame_id',        'len':1},
-                             {'name':'reserved',        'len':2,  'default':'\xFF\xFE'},
-                             {'name':'trasmit_retry',     'len':1},
-                             {'name':'delivery_status',   'len':1},
-                             {'name':'discovery_status',  'len':1}]},
+                             {'name':'parameter',       'len':None}]}
                      }
     
     def __init__(self, *args, **kwargs):
