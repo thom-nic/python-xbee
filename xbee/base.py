@@ -21,7 +21,7 @@ class ThreadQuitException(Exception):
 class CommandFrameException(KeyError):
     pass
 
-class XBeeBase(threading.Thread):
+class XBeeBase():
     """
     Abstract base class providing command generation and response
     parsing methods for XBee modules.
@@ -48,18 +48,36 @@ class XBeeBase(threading.Thread):
                  XBee device's documentation for more information.
     """
                        
-    def __init__(self, ser, shorthand=True, callback=None, escaped=False):
+    def __init__(self, ser=None, shorthand=True, callback=None, escaped=False, start_callback=None):
         super(XBeeBase, self).__init__()
-        self.serial = ser
+
+        if isinstance(ser, serial.Serial):
+            self.serial = ser
+            self.serial_opts = None
+        else:
+            self.serial = None
+            self.serial_opts = ser
+
         self.shorthand = shorthand
-        self._callback = None
-        self._thread_continue = False
-        self._escaped = escaped  
+        self._callback = callback
+        self._start_callback = start_callback
+        self._exit = threading.Event()
+        self._escaped = escaped
+        self._thread = None
         
-        if callback:
-            self._callback = callback
-            self._thread_continue = True
-            self.start()
+#        if callback:
+#            self.start()
+
+
+    def start(self):
+        if not self._callback: return
+        self._exit.clear()
+        self._thread = threading.Thread(
+                target=self.run,
+                name="XBee @ %s" % ser.port )
+        self._thread.daemon = True
+        self._thread.start()
+
 
     def halt(self):
         """
@@ -69,9 +87,9 @@ class XBeeBase(threading.Thread):
         halted. This method will wait until the thread has cleaned
         up before returning.
         """
-        if self._callback:
-            self._thread_continue = False
-            self.join()
+        if not self._callback: return
+        self._exit.set()
+        self._thread.join(10)
         
     def _write(self, data):
         """
@@ -90,11 +108,38 @@ class XBeeBase(threading.Thread):
         This method overrides threading.Thread.run() and is automatically
         called when an instance is created with threading enabled.
         """
-        while True:
+
+        if self.serial is not None and self.start_callback:
+            self.start_callback(self)
+
+        while not self.exit.is_set():
             try:
+                if self.serial is None:
+                    # allows the code to recover/ initialize if the USB device 
+                    # is unplugged after this code is running:
+                    if not os.path.exists( self.serial_opts['port'] ):
+                        self._exit.wait(10) # wait before retry
+                        continue
+                    # self.serial may be a dict of init params
+                    self.serial = serial.Serial(**self.serial_opts)
+                    if self.start_callback: self.start_callback(self)
+
                 self._callback(self.wait_read_frame())
+
+            except serial.SerialException as ex:
+                self._exit.wait(2)
+                try: # try to re-init the device
+                    if self.serial is not None: self.serial.open() 
+                except Exception, msg: 
+                    # worst case, completely re-init the device
+                    print "Unexpected error re-opening serial port! %s" % msg
+                    self.serial = None
+            except Exception, msg:
+                print "XBee: Unexpected error! %s" % msg
             except ThreadQuitException:
                 break
+
+        self.serial.close()
     
     def _wait_for_frame(self):
         """
@@ -111,12 +156,11 @@ class XBeeBase(threading.Thread):
         frame = APIFrame(escaped=self._escaped)
         
         while True:
-            if self._callback and not self._thread_continue:
-                raise ThreadQuitException
+            if self._exit.is_set(): raise ThreadQuitException
 
-            if self.serial.inWaiting() == 0:
-                time.sleep(.01)
-                continue
+#            if self.serial.inWaiting() == 0:
+#                self._exit.wait(.01)
+#                continue
             
             byte = self.serial.read()
 
