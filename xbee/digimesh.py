@@ -6,6 +6,8 @@ Inspired by code written by Amit Synderman, Marco Sangalli and Paul Malmsten
 matteo@luccalug.it http://matteo.luccalug.it
 
 This module provides an XBee (Digimesh) API library.
+
+Updated by Thom Nichols http://blog.thomnichols.org
 """
 import struct
 from xbee.base import XBeeBase
@@ -118,7 +120,7 @@ class DigiMesh(XBeeBase):
                              {'name':'options',           'len':1},
                              {'name':'source_addr',       'len':2},
                              {'name':'network_addr_long', 'len':8},
-                             {'name':'NI',                'len':2},
+                             {'name':'node_id',           'len':'null_terminated'},
                              {'name':'parent',            'len':1}]},
 
                      b"\x97":
