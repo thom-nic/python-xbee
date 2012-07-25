@@ -12,6 +12,7 @@ This class should be subclassed in order to provide
 series-specific functionality.
 """
 import struct, threading, time
+import serial
 from xbee.frame import APIFrame
 from xbee.python2to3 import byteToInt, intToByte
 
@@ -21,7 +22,7 @@ class ThreadQuitException(Exception):
 class CommandFrameException(KeyError):
     pass
 
-class XBeeBase():
+class XBeeBase(object):
     """
     Abstract base class providing command generation and response
     parsing methods for XBee modules.
