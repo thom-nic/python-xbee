@@ -11,10 +11,12 @@ This class defines data and methods common to all XBee modules.
 This class should be subclassed in order to provide
 series-specific functionality.
 """
-import struct, threading, time
+import threading, time, os, logging
 import serial
 from xbee.frame import APIFrame
 from xbee.python2to3 import byteToInt, intToByte
+
+log = logging.getLogger(__name__)
 
 class ThreadQuitException(Exception):
     pass
@@ -73,9 +75,10 @@ class XBeeBase(object):
     def start(self):
         if not self._callback: return
         self._exit.clear()
+        port = self.serial.port if self.serial else self.serial_opts['port']
         self._thread = threading.Thread(
                 target=self.run,
-                name="XBee @ %s" % ser.port )
+                name="XBee @ %s" % port )
         self._thread.daemon = True
         self._thread.start()
 
@@ -110,10 +113,10 @@ class XBeeBase(object):
         called when an instance is created with threading enabled.
         """
 
-        if self.serial is not None and self.start_callback:
-            self.start_callback(self)
+        if self.serial is not None and self._start_callback:
+            self._start_callback(self)
 
-        while not self.exit.is_set():
+        while not self._exit.is_set():
             try:
                 if self.serial is None:
                     # allows the code to recover/ initialize if the USB device 
@@ -123,20 +126,26 @@ class XBeeBase(object):
                         continue
                     # self.serial may be a dict of init params
                     self.serial = serial.Serial(**self.serial_opts)
-                    if self.start_callback: self.start_callback(self)
+                    log.debug("Opened serial: %r", self.serial_opts)
+                    if self._start_callback: self._start_callback(self)
 
                 self._callback(self.wait_read_frame())
 
             except serial.SerialException as ex:
                 self._exit.wait(2)
+                log.warn("Serial error: %s",ex)
                 try: # try to re-init the device
-                    if self.serial is not None: self.serial.open() 
+                    if self.serial is not None:
+                        self.serial.open() 
+                        log.debug("Re-opened serial port @ %s", self.serial.port)
                 except Exception, msg: 
                     # worst case, completely re-init the device
-                    print "Unexpected error re-opening serial port! %s" % msg
+                    log.exception( "Error re-opening serial port! %s", msg )
+                    # TODO use Serial.getSettingsDict() to re-init the port
+                    if self.serial_opts is None: raise # can't re-init! Abort! Abort!
                     self.serial = None
             except Exception, msg:
-                print "XBee: Unexpected error! %s" % msg
+                log.exception( "Unexpected error! %s", msg )
             except ThreadQuitException:
                 break
 
@@ -221,7 +230,7 @@ class XBeeBase(object):
                     else:
                         # Otherwise, fail
                         raise KeyError(
-                            "The expected field %s of length %d was not provided" 
+                            "The expected field '%s' of length %d was not provided" 
                             % (field['name'], field['len']))
                 else:
                     # No specific length, ignore it
