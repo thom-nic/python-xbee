@@ -11,7 +11,7 @@ This class defines data and methods common to all XBee modules.
 This class should be subclassed in order to provide
 series-specific functionality.
 """
-import threading, time, os, logging
+import threading, os, logging
 import serial
 from xbee.frame import APIFrame
 from xbee.python2to3 import byteToInt, intToByte
