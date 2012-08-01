@@ -432,7 +432,9 @@ class XBeeBase(object):
         (of 'None' in the specification. Those are optional).
         """
         # Pass through the keyword arguments
-        self._write(self._build_command(cmd, **kwargs))
+        cmd = self._build_command(cmd, **kwargs)
+        if self._escaped: cmd = APIFrame.escape(cmd)
+        self._write(cmd)
         
         
     def wait_read_frame(self):
