@@ -114,14 +114,14 @@ class DigiMesh(XBeeBase):
                      b"\x95":
                         {'name':'node_id',
                          'structure':
-                            [{'name':'frame_id',          'len':1},
-                             {'name':'source_addr_long',  'len':8},
+                            [{'name':'source_addr_long',  'len':8},
                              {'name':'network_addr',      'len':2},
                              {'name':'options',           'len':1},
                              {'name':'source_addr',       'len':2},
                              {'name':'network_addr_long', 'len':8},
                              {'name':'node_id',           'len':'null_terminated'},
-                             {'name':'parent',            'len':1}]},
+                             {'name':'parent',            'len':2},
+                             {'name':'unknown',           'len':6}]},
 
                      b"\x97":
                         {'name':'remote_at_response',
