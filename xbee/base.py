@@ -144,10 +144,10 @@ class XBeeBase(object):
                     # TODO use Serial.getSettingsDict() to re-init the port
                     if self.serial_opts is None: raise # can't re-init! Abort! Abort!
                     self.serial = None
-            except Exception, msg:
-                log.exception( "Unexpected error! %s", msg )
             except ThreadQuitException:
                 break
+            except Exception, msg:
+                log.exception( "Unexpected error! %s", msg )
 
         self.serial.close()
     
@@ -323,9 +323,9 @@ class XBeeBase(object):
         # If there are more bytes than expected, raise an exception
         if index < len(data):
             raise ValueError(
-                "Response packet was longer than expected; expected: %d, got: %d bytes" % (index, 
-                                                                                           len(data)))
-                                                                                           
+                "Response packet [ %r ] too long! Expected: %d, got: %d bytes" % \
+                (data, index, len(data)) )
+
         # Apply parsing rules if any exist
         if 'parsing' in packet:
             for parse_rule in packet['parsing']:
