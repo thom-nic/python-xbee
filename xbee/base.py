@@ -11,7 +11,7 @@ This class defines data and methods common to all XBee modules.
 This class should be subclassed in order to provide
 series-specific functionality.
 """
-import threading, os, logging
+import threading, os, logging, time
 import serial
 from xbee.frame import APIFrame
 from xbee.python2to3 import byteToInt, intToByte
@@ -19,6 +19,9 @@ from xbee.python2to3 import byteToInt, intToByte
 log = logging.getLogger(__name__)
 
 class ThreadQuitException(Exception):
+    pass
+
+class TimeoutException(Exception):
     pass
     
 class CommandFrameException(KeyError):
@@ -129,11 +132,15 @@ class XBeeBase(object):
                     log.debug("Opened serial: %r", self.serial_opts)
                     if self._start_callback: self._start_callback(self)
 
-                self._callback(self.wait_read_frame())
+                self._callback(self.wait_read_frame(timeout=5))
+
+            # ignore timeouts, but this allows the thread to be responsive rather
+            # than blocking indefinitely on read
+            except TimeoutException: pass
 
             except serial.SerialException as ex:
                 self._exit.wait(2)
-                log.warn("Serial error: %s",ex)
+                log.warn("Serial error: %s", ex)
                 try: # try to re-init the device
                     if self.serial is not None:
                         self.serial.open() 
@@ -144,14 +151,15 @@ class XBeeBase(object):
                     # TODO use Serial.getSettingsDict() to re-init the port
                     if self.serial_opts is None: raise # can't re-init! Abort! Abort!
                     self.serial = None
-            except ThreadQuitException:
-                break
+
+            except ThreadQuitException: break
+
             except Exception, msg:
                 log.exception( "Unexpected error! %s", msg )
 
         self.serial.close()
     
-    def _wait_for_frame(self):
+    def _wait_for_frame(self,timeout=None):
         """
         _wait_for_frame: None -> binary data
         
@@ -164,28 +172,32 @@ class XBeeBase(object):
         exit by raising a ThreadQuitException.
         """
         frame = APIFrame(escaped=self._escaped)
+
+        deadline = 0
+        if timeout is not None and timeout > 0:
+            deadline = time.time() + timeout
         
         while True:
             if self._exit.is_set(): raise ThreadQuitException
 
-#            if self.serial.inWaiting() == 0:
-#                self._exit.wait(.01)
-#                continue
-            
             byte = self.serial.read()
 
             if byte != APIFrame.START_BYTE:
+                if deadline and time.time() > deadline:
+                    raise TimeoutException
                 continue
 
             # Save all following bytes, if they are not empty
-            if len(byte) == 1:
-                frame.fill(byte)
+            if byte: frame.fill(byte)
                 
             while(frame.remaining_bytes() > 0):
-                byte = self.serial.read()
+                byte = self.serial.read( frame.remaining_bytes() )
                 
-                if len(byte) == 1:
-                    frame.fill(byte)
+                for b in byte: frame.fill(b)
+
+                if frame.remaining_bytes() > 0 and \
+                         deadline and time.time() > deadline:
+                    raise TimeoutException
 
             try:
                 # Try to parse and return result
@@ -435,7 +447,7 @@ class XBeeBase(object):
         self._write(self._build_command(cmd, **kwargs))
         
         
-    def wait_read_frame(self):
+    def wait_read_frame(self,timeout=None):
         """
         wait_read_frame: None -> frame info dictionary
         
@@ -445,9 +457,10 @@ class XBeeBase(object):
         and returns the resulting dictionary
         """
         
-        frame = self._wait_for_frame()
+        frame = self._wait_for_frame(timeout)
         return self._split_response(frame.data)
         
+
     def __getattr__(self, name):
         """
         If a method by the name of a valid api command is called,
