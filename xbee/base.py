@@ -132,7 +132,9 @@ class XBeeBase(object):
                     log.debug("Opened serial: %r", self.serial_opts)
                     if self._start_callback: self._start_callback(self)
 
-                self._callback(self.wait_read_frame(timeout=5))
+                # FIXME this timeout should not be hard-coded, it should be 
+                # based on the serial timeout
+                self._callback(self.wait_read_frame(timeout=10))
 
             # ignore timeouts, but this allows the thread to be responsive rather
             # than blocking indefinitely on read
@@ -187,17 +189,17 @@ class XBeeBase(object):
                     raise TimeoutException
                 continue
 
-            # Save all following bytes, if they are not empty
-            if byte: frame.fill(byte)
+            frame.fill(byte)    # Save all following bytes
                 
             while(frame.remaining_bytes() > 0):
-                byte = self.serial.read( frame.remaining_bytes() )
-                
-                for b in byte: frame.fill(b)
+                if self._exit.is_set(): raise ThreadQuitException
 
-                if frame.remaining_bytes() > 0 and \
-                         deadline and time.time() > deadline:
+                if self.serial.inwaiting() < 1 and \
+                        deadline and time.time() > deadline:
                     raise TimeoutException
+
+                byte = self.serial.read( frame.remaining_bytes() )                
+                for b in byte: frame.fill(b)
 
             try:
                 # Try to parse and return result
