@@ -194,7 +194,7 @@ class XBeeBase(object):
             while(frame.remaining_bytes() > 0):
                 if self._exit.is_set(): raise ThreadQuitException
 
-                if self.serial.inwaiting() < 1 and \
+                if self.serial.inWaiting() < 1 and \
                         deadline and time.time() > deadline:
                     raise TimeoutException
 
