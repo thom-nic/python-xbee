@@ -121,7 +121,7 @@ class DigiMesh(XBeeBase):
                              {'name':'network_addr_long', 'len':8},
                              {'name':'node_id',           'len':'null_terminated'},
                              {'name':'parent',            'len':2},
-                             {'name':'unknown',           'len':6}]},
+                             {'name':'unknown',           'len':None}]},
 
                      b"\x97":
                         {'name':'remote_at_response',
