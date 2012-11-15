@@ -138,7 +138,8 @@ class XBeeBase(object):
 
             # ignore timeouts, but this allows the thread to be responsive rather
             # than blocking indefinitely on read
-            except TimeoutException: pass
+            except TimeoutException, ex:
+                if ex.args: log.debug("Packet timeout after %s bytes", ex)
 
             except serial.SerialException as ex:
                 self._exit.wait(2)
@@ -199,7 +200,7 @@ class XBeeBase(object):
 
                 if self.serial.inWaiting() < 1 and \
                         deadline and time.time() > deadline:
-                    raise TimeoutException
+                    raise TimeoutException, len(frame.data)
 
                 byte = self.serial.read( frame.remaining_bytes() )                
                 for b in byte: frame.fill(b)
