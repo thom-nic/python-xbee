@@ -189,6 +189,9 @@ class XBeeBase(object):
                     raise TimeoutException
                 continue
 
+            if timeout is not None and timeout > 0:
+                deadline = time.time() + timeout
+
             frame.fill(byte)    # Save all following bytes
                 
             while(frame.remaining_bytes() > 0):
