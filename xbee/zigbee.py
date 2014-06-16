@@ -201,7 +201,11 @@ class ZigBee(XBeeBase):
                result['status'] = packet_info['parameter'][null_terminator_index+4:null_terminator_index+5]
                result['profile_id'] = packet_info['parameter'][null_terminator_index+5:null_terminator_index+7]
                result['manufacturer'] = packet_info['parameter'][null_terminator_index+7:null_terminator_index+9]
-               
+               if (len(packet_info['parameter']) - null_terminator_index-9) == 4:
+                   result['device_type_id'] = packet_info['parameter'][null_terminator_index+9:null_terminator_index+13]
+                   # hack
+                   null_terminator_index += 4
+
                # Simple check to ensure a good parse
                if null_terminator_index+9 != len(packet_info['parameter']):
                    raise ValueError("Improper ND response length: expected {0}, read {1} bytes".format(len(packet_info['parameter']), null_terminator_index+9))
